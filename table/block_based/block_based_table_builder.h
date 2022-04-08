@@ -147,7 +147,7 @@ class BlockBasedTableBuilder : public TableBuilder {
                    BlockHandle& index_block_handle);
 
   struct Rep;
-  class BlockBasedTablePropertiesCollectorFactory;
+  class BlockBasedTablePropertiesCollectorFactory;  // 只在这里有一处，可以删除了吧
   class BlockBasedTablePropertiesCollector;
   Rep* rep_;
 
