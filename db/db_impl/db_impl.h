@@ -1415,7 +1415,7 @@ class DBImpl : public DB {
 #ifndef NDEBUG
   friend class DBTest2_ReadCallbackTest_Test;
   friend class WriteCallbackPTest_WriteWithCallbackTest_Test;
-  friend class XFTransactionWriteHandler;
+  friend class XFTransactionWriteHandler;  // 只有这一处是否可以删除
   friend class DBBlobIndexTest;
   friend class WriteUnpreparedTransactionTest_RecoveryTest_Test;
 #endif
