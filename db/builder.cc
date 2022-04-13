@@ -51,7 +51,7 @@ TableBuilder* NewTableBuilder(const TableBuilderOptions& tboptions,
          tboptions.column_family_name.empty());
   return tboptions.ioptions.table_factory->NewTableBuilder(tboptions, file);
 }
-
+// 这么多参数 是怕人看懂吗
 Status BuildTable(
     const std::string& dbname, VersionSet* versions,
     const ImmutableDBOptions& db_options, const TableBuilderOptions& tboptions,
@@ -77,7 +77,7 @@ Status BuildTable(
   auto& mutable_cf_options = tboptions.moptions;
   auto& ioptions = tboptions.ioptions;
   // Reports the IOStats for flush for every following bytes.
-  const size_t kReportFlushIOStatsEvery = 1048576;
+  const size_t kReportFlushIOStatsEvery = 1048576;    //写个宏不行吗 虽然我讨厌宏 但直接写数字更看不懂啊
   OutputValidator output_validator(
       tboptions.internal_comparator,
       /*enable_order_check=*/
@@ -96,7 +96,7 @@ Status BuildTable(
         range_del_iter->num_unfragmented_tombstones();
     total_tombstone_payload_bytes +=
         range_del_iter->total_tombstone_payload_bytes();
-    range_del_agg->AddTombstones(std::move(range_del_iter));
+    range_del_agg->AddTombstones(std::move(range_del_iter));   //为什么不直接使用range_del_iters呢
   }
 
   std::string fname = TableFileName(ioptions.cf_paths, meta->fd.GetNumber(),
@@ -104,7 +104,7 @@ Status BuildTable(
   std::vector<std::string> blob_file_paths;
   std::string file_checksum = kUnknownFileChecksum;
   std::string file_checksum_func_name = kUnknownFileChecksumFuncName;
-#ifndef ROCKSDB_LITE
+#ifndef ROCKSDB_LITE    //似乎用于收集相关event，待分析具体用法
   EventHelpers::NotifyTableFileCreationStarted(ioptions.listeners, dbname,
                                                tboptions.column_family_name,
                                                fname, job_id, tboptions.reason);
@@ -126,7 +126,7 @@ Status BuildTable(
       context.column_family_id = tboptions.column_family_id;
       context.reason = tboptions.reason;
       compaction_filter =
-          ioptions.compaction_filter_factory->CreateCompactionFilter(context);
+          ioptions.compaction_filter_factory->CreateCompactionFilter(context);  // 这里使用factory更灵活，有哪些是直接使用compaction_filter无法实现的呢？
       if (compaction_filter != nullptr &&
           !compaction_filter->IgnoreSnapshots()) {
         s.PermitUncheckedError();
@@ -160,7 +160,7 @@ Status BuildTable(
       }
       FileTypeSet tmp_set = ioptions.checksum_handoff_file_types;
       file->SetIOPriority(io_priority);
-      file->SetWriteLifeTimeHint(write_hint);
+      file->SetWriteLifeTimeHint(write_hint);   //具体用法待分析
       file_writer.reset(new WritableFileWriter(
           std::move(file), fname, file_options, ioptions.clock, io_tracer,
           ioptions.stats, ioptions.listeners,
@@ -210,8 +210,8 @@ Status BuildTable(
       if (!s.ok()) {
         break;
       }
-      builder->Add(key, value);
-      meta->UpdateBoundaries(key, value, ikey.sequence, ikey.type);
+      builder->Add(key, value);    //所有数据来自iter，也就是每个数据都需要操作一遍，无法直接写入一块或一段数据
+      meta->UpdateBoundaries(key, value, ikey.sequence, ikey.type);  //每次都要执行吗？ 可不可以提到循环之外
 
       // TODO(noetzli): Update stats after flush, too.
       if (io_priority == Env::IO_HIGH &&
@@ -220,7 +220,7 @@ Status BuildTable(
             ThreadStatus::FLUSH_BYTES_WRITTEN, IOSTATS(bytes_written));
       }
     }
-    if (!s.ok()) {
+    if (!s.ok()) {  //这里没有关于builder->Add的判断，也就是要求builder->Add执行就是正确，或其他方式抛出异常，待分析
       c_iter.status().PermitUncheckedError();
     } else if (!c_iter.status().ok()) {
       s = c_iter.status();
@@ -283,7 +283,7 @@ Status BuildTable(
         *table_properties = tp;
       }
     }
-    delete builder;
+    delete builder;   // 换种写法吧，放在不要的引入异常，这样中间推出很容易内存泄露
 
     // Finish and check for file errors
     TEST_SYNC_POINT("BuildTable:BeforeSyncTable");
@@ -319,7 +319,7 @@ Status BuildTable(
     // TODO Also check the IO status when create the Iterator.
 
     TEST_SYNC_POINT("BuildTable:BeforeOutputValidation");
-    if (s.ok() && !empty) {
+    if (s.ok() && !empty) {   //待分析这一段的作用
       // Verify that the table is usable
       // We set for_compaction to false and don't OptimizeForCompactionTableRead
       // here because this is a special case after we finish the table building
