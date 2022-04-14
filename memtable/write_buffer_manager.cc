@@ -20,7 +20,7 @@ WriteBufferManager::WriteBufferManager(size_t _buffer_size,
                                        std::shared_ptr<Cache> cache,
                                        bool allow_stall)
     : buffer_size_(_buffer_size),
-      mutable_limit_(buffer_size_ * 7 / 8),
+      mutable_limit_(buffer_size_ * 7 / 8),    //这里写死了一个比例，7/8,是否可以改为一个设置参数更灵活一些
       memory_used_(0),
       memory_active_(0),
       cache_res_mgr_(nullptr),
@@ -32,7 +32,7 @@ WriteBufferManager::WriteBufferManager(size_t _buffer_size,
     // therefore we set delayed_decrease = true to save some dummy entry
     // insertion on memory increase right after memory decrease
     cache_res_mgr_.reset(
-        new CacheReservationManager(cache, true /* delayed_decrease */));
+        new CacheReservationManager(cache, true /* delayed_decrease */));  //CacheReservationManager 待分析
   }
 #else
   (void)cache;
@@ -42,7 +42,7 @@ WriteBufferManager::WriteBufferManager(size_t _buffer_size,
 WriteBufferManager::~WriteBufferManager() {
 #ifndef NDEBUG
   std::unique_lock<std::mutex> lock(mu_);
-  assert(queue_.empty());
+  assert(queue_.empty());                   //queue_为空的限制是否有相关说明明确，否则容易出现错误使用的情况
 #endif
 }
 
@@ -61,7 +61,7 @@ void WriteBufferManager::ReserveMem(size_t mem) {
     memory_used_.fetch_add(mem, std::memory_order_relaxed);
   }
   if (enabled()) {
-    memory_active_.fetch_add(mem, std::memory_order_relaxed);
+    memory_active_.fetch_add(mem, std::memory_order_relaxed);    //这里似乎是直接增加了mem的大小，和vector中的reserve不同，注意一下
   }
 }
 
@@ -112,7 +112,7 @@ void WriteBufferManager::FreeMemWithCache(size_t mem) {
   // Use a mutex to protect various data structures. Can be optimized to a
   // lock-free solution if it ends up with a performance bottleneck.
   std::lock_guard<std::mutex> lock(cache_res_mgr_mu_);
-  size_t new_mem_used = memory_used_.load(std::memory_order_relaxed) - mem;
+  size_t new_mem_used = memory_used_.load(std::memory_order_relaxed) - mem;   //这里就不担心mem参数传入的大于memory_used_吗？
   memory_used_.store(new_mem_used, std::memory_order_relaxed);
   Status s =
       cache_res_mgr_->UpdateCacheReservation<CacheEntryRole::kWriteBuffer>(
@@ -128,7 +128,7 @@ void WriteBufferManager::FreeMemWithCache(size_t mem) {
 #endif  // ROCKSDB_LITE
 }
 
-void WriteBufferManager::BeginWriteStall(StallInterface* wbm_stall) {
+void WriteBufferManager::BeginWriteStall(StallInterface* wbm_stall) {   //主要内容在wbm_stall，待分析
   assert(wbm_stall != nullptr);
   assert(allow_stall_);
 
@@ -178,7 +178,7 @@ void WriteBufferManager::MaybeEndWriteStall() {
   for (StallInterface* wbm_stall : queue_) {
     wbm_stall->Signal();
   }
-  cleanup = std::move(queue_);
+  cleanup = std::move(queue_);    //这种放在锁外释放的用法倒是头一次见，很好啊   
 }
 
 void WriteBufferManager::RemoveDBFromQueue(StallInterface* wbm_stall) {

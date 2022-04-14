@@ -34,7 +34,7 @@ class StallInterface {
   virtual void Signal() = 0;
 };
 
-class WriteBufferManager final {
+class WriteBufferManager final {  //注意这里的final
  public:
   // Parameters:
   // _buffer_size: _buffer_size = 0 indicates no limit. Memory won't be capped.
@@ -83,7 +83,7 @@ class WriteBufferManager final {
 
   void SetBufferSize(size_t new_size) {
     buffer_size_.store(new_size, std::memory_order_relaxed);
-    mutable_limit_.store(new_size * 7 / 8, std::memory_order_relaxed);
+    mutable_limit_.store(new_size * 7 / 8, std::memory_order_relaxed);  // 7/8写一个常量更好吧 构造函数中也使用了
     // Check if stall is active and can be ended.
     MaybeEndWriteStall();
   }
